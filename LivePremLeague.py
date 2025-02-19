@@ -19,27 +19,37 @@ def get_standings():
             return data["response"][0]["league"]["standings"][0]  # Extracting the standings list
     return []
 
-# How the GUI updates the standings
+# Function to update the table with new standings
 def update_standings():
-     for row in table.get_children():
-        table.delete(row)  # Clear the table before updating
+    for row in table.get_children():
+        table.delete(row)  # Clear previous standings
 
-     standings = get_standings()
-     if standings:
-         for team_data in standings:
-             position = team_data["rank"]
-             team_name = team_data["team"]["name"]
-             played = team_data["all"]["played"]
-             wins = team_data["all"]["win"]
-             draws = team_data["all"]["draw"]
-             losses = team_data["all"]["lose"]
-             points= team_data["points"]
+    standings = get_standings()
+    
+    if standings:
+        for index, team_data in enumerate(standings):
+            position = team_data["rank"]
+            team_name = team_data["team"]["name"]
+            played = team_data["all"]["played"]
+            wins = team_data["all"]["win"]
+            draws = team_data["all"]["draw"]
+            losses = team_data["all"]["lose"]
+            points = team_data["points"]
 
-             table.insert("", "end", values=(position, team_name, played, wins, draws, losses, points))
-         #else:
-             #table.insert("", "end", values=("No data available", "", "", "", "", "", ""))
+            # Assign row colors based on position
+            row_tag = "normal"
+            if position == 1:
+                row_tag = "champion"  # First place (champion)
+            elif position >= len(standings) - 2:
+                row_tag = "relegation"  # Bottom 3 teams (relegation)
 
-# Creating the window
+            # Insert the data into the table with the appropriate tag
+            table.insert("", "end", values=(position, team_name, played, wins, draws, losses, points), tags=(row_tag,))
+
+    else:
+        table.insert("", "end", values=("No data available", "", "", "", "", "", ""))
+
+# Create the main window
 root = tk.Tk()
 root.title("Premier League Table")
 root.geometry("700x400")
@@ -48,6 +58,11 @@ root.geometry("700x400")
 columns = ("Position", "Team", "Played", "W", "D", "L", "Points")
 table = ttk.Treeview(root, columns=columns, show="headings")
 
+# Apply color styling to rows
+table.tag_configure("champion", background="lightgreen", font=("Arial", 10, "bold"))  # Green for champion
+table.tag_configure("relegation", background="red", foreground="white", font=("Arial", 10, "bold"))  # Red for relegated
+table.tag_configure("normal", background="white", font=("Arial", 10))  # Default styling
+
 # Set column headers
 for col in columns:
     table.heading(col, text=col)
@@ -55,9 +70,12 @@ for col in columns:
 
 table.pack(expand=True, fill="both", padx=10, pady=10)
 
+# Refresh button to update the standings
 refresh_button = tk.Button(root, text="Refresh the standings", command=update_standings)
 refresh_button.pack(pady=10)
 
+# Initial table population
 update_standings()
 
+# Run the GUI
 root.mainloop()
