@@ -1,51 +1,63 @@
+from cgitb import text
 import requests
 import json
+import tkinter as tk
+from tkinter import ttk
 
-# URL to the Football API endpoint that retrieves the standings data for the Premier League (league ID 39) for the 2023 season
-url = "https://v3.football.api-sports.io/standings?league=39&season=2023"
+def get_standings():
+    url = "https://v3.football.api-sports.io/standings?league=39&season=2023"
+    headers = {
+        "x-rapidapi-host": "v3.football.api-sports.io",
+        "x-rapidapi-key": "dfae65a3595cb0ac72363e9209e886bf"  # Replace with your API key
+    }
 
-# Headers including the API key required to authenticate the request
-headers = {
-    "x-rapidapi-host": "v3.football.api-sports.io",  # Host for the API
-    "x-rapidapi-key": "dfae65a3595cb0ac72363e9209e886bf"  # Your API key for authentication
-}
-
-# Sending GET request to the API with the specified URL and headers
-response = requests.get(url, headers=headers)
-
-# If the response code is 200, meaning the request was successful
-if response.status_code == 200:
-    # Parse the JSON data from the API response
-    data = response.json()
+    response = requests.get(url, headers=headers)
     
-    # Optionally, you can print the full response data to check its structure (commented out)
-    # print("Full Response:", data)
-    
-    # Check if "response" exists and contains data (stands for valid API response)
-    if "response" in data and data["response"]:
-        # Extract standings data from the response
-        standings = data["response"][0]["league"]["standings"][0]  # [0] selects the first (and typically only) list of standings for the season
-        
-        # Printing a header for the standings
-        print("\nPremier League Standings (2023):\n")
-        print(f"{'Position':<10}{'Team':<30}{'Played':<10}{'W':<5}{'D':<5}{'L':<5}{'Points'}")
+    if response.status_code == 200:
+        data = response.json()
+        if "response" in data and data["response"]:
+            return data["response"][0]["league"]["standings"][0]  # Extracting the standings list
+    return []
 
-        # Loop through each team's data in the standings list
-        for team_data in standings:
-            # Extract the relevant data for each team in the standings
-            position = team_data["rank"]  # Team's position in the league
-            team_name = team_data["team"]["name"]  # Team's name
-            played = team_data["all"]["played"]  # Number of games played
-            wins = team_data["all"]["win"]  # Number of wins
-            draws = team_data["all"]["draw"]  # Number of draws
-            losses = team_data["all"]["lose"]  # Number of losses
-            points = team_data["points"]  # Points accumulated
+# How the GUI updates the standings
+def update_standings():
+     for row in table.get_children():
+        table.delete(row)  # Clear the table before updating
 
-            # Print each team's data in a formatted manner
-            print(f"{position:<10}{team_name:<30}{played:<10}{wins:<5}{draws:<5}{losses:<5}{points}")
-    else:
-        # If no standings data is available, notify the user
-        print("No standings data available.")
-else:
-    # If the request failed (non-200 response), print the error status code and message
-    print(f"Failed to retrieve data: {response.status_code} - {response.text}")
+     standings = get_standings()
+     if standings:
+         for team_data in standings:
+             position = team_data["rank"]
+             team_name = team_data["team"]["name"]
+             played = team_data["all"]["played"]
+             wins = team_data["all"]["win"]
+             draws = team_data["all"]["draw"]
+             losses = team_data["all"]["lose"]
+             points= team_data["points"]
+
+             table.insert("", "end", values=(position, team_name, played, wins, draws, losses, points))
+         #else:
+             #table.insert("", "end", values=("No data available", "", "", "", "", "", ""))
+
+# Creating the window
+root = tk.Tk()
+root.title("Premier League Table")
+root.geometry("700x400")
+
+# Table (Treeview) for displaying standings
+columns = ("Position", "Team", "Played", "W", "D", "L", "Points")
+table = ttk.Treeview(root, columns=columns, show="headings")
+
+# Set column headers
+for col in columns:
+    table.heading(col, text=col)
+    table.column(col, anchor="center", width=100)
+
+table.pack(expand=True, fill="both", padx=10, pady=10)
+
+refresh_button = tk.Button(root, text="Refresh the standings", command=update_standings)
+refresh_button.pack(pady=10)
+
+update_standings()
+
+root.mainloop()
